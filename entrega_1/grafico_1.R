@@ -56,6 +56,65 @@ ggplot(df_filtered, aes(x = name, y = val, fill = nivel)) +
 #########################################################################
 #                               SEGUNDA GRÁFICA                         #
 #########################################################################
+# ¿Cuál de las estaciones tiene más seguimiento biológico?
+bio <- read.table("entrega_1/data/measure_bi_2024.csv", header = TRUE, sep = ";",stringsAsFactors = FALSE, encoding = "utf-8")
+lugares <- read.table("entrega_1/data/samplePoints_2024.csv", header = TRUE, sep = ";", encoding = "utf-8")
+
+names(bio)[names(bio) == 'Sample.Point.Code'] <- 'Code'
+names(bio)[names(bio) == 'Date'] <- 'date'
+bio$date <- as.Date(bio$date, format = "%d/%m/%Y")
+bio$Level <- ifelse(bio$Level == "S", "Superficie", ifelse(bio$Level == "F", "Fondo", bio$Level))
+
+# Agrupamos bio y lugares y creamos el dataframe 
+library(tidyverse)
+dat <- left_join(bio, lugares, by = join_by(Code)) 
+df <- data.frame(id = dat$Code, nombre = dat$Sample.Point, x = dat$XETRS89, y = dat$YETRS89)
+
+# Agrupamos por ID, contamos el número de apariciones de cada uno, lo añadimos en una nueva columna y nos quedamos con las entradas de id distinto
+df <- df %>%  group_by(id) %>% mutate(numMuestras = n() - 1)
+df <- df %>% distinct(id, .keep_all = TRUE)
+ungroup()
+
+# Crear un mapa geográfico con los puntos de interés
+# install.packages(c("sf", "ggspatial", "rnaturalearth", "rnaturalearthdata", "ggrepel"))
+library(ggplot2)
+library(sf)
+library(ggspatial)
+library(ggrepel)
+library(rnaturalearth)
+library(rnaturalearthhires) # remotes::install_github("ropensci/rnaturalearthhires")
+library(rnaturalearthdata)
+
+# convertimos el dataframe a sf para trabajar con coordenadas
+df_sf <- st_as_sf(df, coords = c("x", "y"), crs = 25830)  # ETRS89
+df_sf <- st_transform(df_sf, crs = 4326)  # Convertir a WGS84 para el mapa
+
+# Descargamos los mapas geográficos de España y Francia y el mapa geopolítico de España
+spain <- ne_countries(country = "Spain", scale = "medium", returnclass = "sf")
+france <- ne_countries(country = "France", scale = "medium", returnclass = "sf")
+provinces <- ne_states(country = "Spain", returnclass = "sf")
+
+# Creamos la zona de recorte de los mapas
+euskadi <- st_bbox(c(xmin = -3.4, xmax = -1.0, ymin = 43.0, ymax = 44.0), crs = st_crs(4326))
+
+ggplot() + 
+     geom_sf(data = spain, fill = "lightgray", color = "white") +
+     geom_sf(data = france, fill = "lightgray", color = "white") +
+     geom_sf(data = provinces, fill = NA, color = "black", linetype = "dashed") +
+
+     geom_sf(data = df_sf, aes(size = numMuestras), shape = 21, fill = "blue", color = "black", alpha = 0.6) +
+     geom_text_repel(data = df_sf, aes(label = nombre, geometry = geometry), stat = "sf_coordinates", size = 4, force = 15, min.segment.length = 0.3, nudge_x = c(-0.3, 0.3), nudge_y = c(0.15, -0.15), box.padding = 0.6, point.padding = 0.5,) +
+     labs(x = "Longitud", y = "Latitud", size = "Número de Muestras", title = "Mapa del Litoral de Euskadi con Círculos según el Número de Muestras", subtitle = "Coordenadas ETRS89 proyectadas en WGS84") + 
+     annotation_scale(location = "bl", width_hint = 0.5) +
+     annotation_north_arrow(location = "tl", which_north = "true", pad_x = unit(0.75, "in"), pad_y = unit(0.5, "in"), style = north_arrow_fancy_orienteering) +
+  
+     coord_sf(xlim = c(euskadi["xmin"], euskadi["xmax"]), ylim = c(euskadi["ymin"], euskadi["ymax"]), expand = FALSE) +
+     theme_minimal() +
+     theme(legend.position = "right")
+
+#########################################################################
+#                               TERCCERA GRÁFICA                        #
+#########################################################################
 d1 <- read.table("measure_fq_2024.csv", sep=";", header=TRUE, stringsAsFactors = FALSE, fileEncoding="utf-8")
 d2 <- read.table("measure_bi_2024.csv", sep=";", header=TRUE, stringsAsFactors = FALSE, fileEncoding="utf-8")
 
