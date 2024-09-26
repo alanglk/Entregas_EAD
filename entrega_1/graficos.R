@@ -140,15 +140,12 @@ ggplot() +
 #########################################################################
 #                               TERCCERA GRÁFICA                        #
 #########################################################################
-d1 <- read.table("measure_fq_2024.csv", sep=";", header=TRUE, stringsAsFactors = FALSE, fileEncoding="utf-8")
-d2 <- read.table("measure_bi_2024.csv", sep=";", header=TRUE, stringsAsFactors = FALSE, fileEncoding="utf-8")
-
-#Crear el subconjunto de datos a utilizar.
 df <- subset(d1, Sample.Point.Code %in% c("L-UR20", "L-N20", "L-B20", "L-BI10", "L-U10")) 
 df <- df %>% select(-Date, -Hour, -Level, -Depth)
 
+d2$Date <- as.Date(d2$Date, format = "%d/%m/%Y")
 d22 <- d2 %>%
-  filter(Parameter == "Clorofila A") %>%  # Filtrar solo el parámetro "Clorofila A"
+  filter(Date > as.Date("29/04/2024", format = "%d/%m/%Y")) %>%  
   group_by(Sample.Point.Code, Type, Subgroup, Parameter, Species, Operator, Unit, Additional.information, Situation) %>%
   summarise(Value = mean(Value, na.rm = TRUE))
 df2 <- rbind(df, subset(d22, Sample.Point.Code %in% c("L-UR20", "L-N20", "L-B20", "L-BI10", "L-U10")))
@@ -156,8 +153,8 @@ df3 <- subset(df2, Parameter %in% c("Clorofila A", "Benceno", "Aclonifeno", "Hex
 
 #Cambiar los códigos del eje x a su nombre.
 litorales <- data.frame(
-  Sample.Point.Code = c("L-B20", "L-BI10", "L-N20", "L-U10", "L-UR20"),  # Los códigos que tienes
-  Litoral.Name = c("Litoral de Bakio", "Litoral de Hondarribia", "Litoral de Sopelana", "Litoral de Zumaia", "Litoral de Mompás")  # Los nombres correspondientes
+  Sample.Point.Code = c("L-B20", "L-BI10", "L-N20", "L-U10", "L-UR20"),  
+  Litoral.Name = c("Litoral de Bakio", "Litoral de Hondarribia", "Litoral de Sopelana", "Litoral de Zumaia", "Litoral de Mompás")  
 )
 
 df3 <- df3 %>%
@@ -166,7 +163,7 @@ df3 <- df3 %>%
 
 # En el eje Y los parametros, en el X nombre de los literales, de color el parametro 
 ggplot(df3, aes(x = Sample.Point.Code, y = Value, group = Parameter)) +
-  geom_point(size = 4, shape = 21, aes(fill = Parameter), stroke = 1) + # Forma con borde negro y relleno transparente
+  geom_point(size = 4, shape = 21, aes(fill = Parameter), stroke = 1) + 
   geom_line(aes(color= Parameter), size = 1) +
   labs(x = "", y = "Valor (µg/l)") +
   ggtitle("Relación entre clorofila A y varios parámetros físico/químicos") +
