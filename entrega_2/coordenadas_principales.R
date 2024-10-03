@@ -16,7 +16,7 @@ summary(d)
 # Las distancias están comprendidas entre 0 y 1
 # Realizamos el análisis de coordenadas principales
 # Para este análisis, se supone que las distancias d son euclideas
-d.mds <- cmdscale(d, k = 2, eig = TRUE)
+d.mds <- cmdscale(d, k = 2, eig = TRUE, x.ret = TRUE)
 
 # Mostramos los valores propios para decidir el número de coordenadas
 d.mds$eig
@@ -32,8 +32,6 @@ abline(h = 0, col = "blue")
 # q = 6 -> GOF = 1
 d.mds$GOF
 
-
-
 # De esta manera, se va a considerar una reducción a 2 dimensiones, q = 2, ya
 # que se consigue una buena representación de los datos y es sencillo realizar
 # gráficos donde la tercera componente es el nivel de materia seca
@@ -46,6 +44,7 @@ Hn <- function(n){
 }
 A <- (-1/2) * d ^ 2
 B <- Hn(length(A[, 1])) %*% A %*% Hn(length(A[, 1]))
+# B <- -1/2 * d.mds$x # Otra forma más sencilla
 B.eigen <- eigen(B)
 
 # Proyección de las muestras originales
@@ -65,7 +64,11 @@ ggplot(df_mds, aes(x = X, y = Y, color = nivel)) +
 
 # Proyección de las nuevas muestras
 # x = 1/2 Λ^-1 X' (b -  δ^2)
-new_x <- t(1/2 * diag(1 / diag(L[, 1:q])) %*% t(X[, 1:q]) %*% t((diag(B) - dnuevos ^ 2)))
+
+proyeccion <- function(x_new){
+  1/2 * diag(1 / diag(L[, 1:q])) %*% t(X[, 1:q]) %*% (diag(B) - x_new ^ 2)
+}
+new_x <-apply(dnuevos, 1, proyeccion)
 
 # Representación de las muestras originales y las nuevas
 new_x_df <- as.data.frame(new_x)
@@ -75,7 +78,7 @@ df_new <- rbind(df_mds, new_x_df)
 
 ggplot(df_new, aes(x = X, y = Y, color = nivel)) +
   geom_point(size = 3) +
-  labs(title = "Proyección de datos originales y nuevos", x = "Q1", y = "Q2") +
+  labs(title = "Proyección de datos originales y nuevos 2", x = "Q1", y = "Q2") +
   theme_minimal()
 
 
