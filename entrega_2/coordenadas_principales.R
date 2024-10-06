@@ -44,7 +44,7 @@ Hn <- function(n){
 }
 A <- (-1/2) * d ^ 2
 B <- Hn(length(A[, 1])) %*% A %*% Hn(length(A[, 1]))
-# B <- -1/2 * d.mds$x # Otra forma más sencilla
+B <- -1/2 * d.mds$x # Otra forma más sencilla
 B.eigen <- eigen(B)
 
 # Proyección de las muestras originales
@@ -68,7 +68,7 @@ ggplot(df_mds, aes(x = X, y = Y, color = nivel)) +
 proyeccion <- function(x_new){
   1/2 * diag(1 / diag(L[, 1:q])) %*% t(X[, 1:q]) %*% (diag(B) - x_new ^ 2)
 }
-new_x <-apply(dnuevos, 1, proyeccion)
+new_x <- t(apply(dnuevos, 1, proyeccion))
 
 # Representación de las muestras originales y las nuevas
 new_x_df <- as.data.frame(new_x)
@@ -82,4 +82,44 @@ ggplot(df_new, aes(x = X, y = Y, color = nivel)) +
   theme_minimal()
 
 
+############# MEDIDAS DE BONDAD #############
+# Medida global: Correlacion entre las distancias originales y distancias
+#                en el espacio reducido
+#
+# 1. Tomamos la matriz de distancias de los nuevos elementos
+# 2. Calculamos la matriz de distancias de los nuevos elementos proyectados
+#    en el espacio reducido
+# 3. Calculamos la correlación entre las dos matrices
+# 4. Consideramos la media de las correlaciones como una medida de bondad
+aux <- as.matrix(dist(df_new[, c("X", "Y")]))
+dproy <- aux[212:239,1:211]
+medida_global <- cor(dnuevos, dproy)
+mean(medida_global)
+
+# Medida local: fijado K para la vecindad del nuevo individuo, porcentaje de indivuos 
+#               que coinciden en las vecindades marcadas por las distancias originales 
+#               y por las distancias en el espacio de dimensión reducida.
+#
+# 1. Obtener los K primeros vecinos de los nuevos elementos
+# 2. Obtener los K primeros vecinos de los nuevos elementos proyectados
+# 3. Calcular el número de coincidencias entre los vecinos originales y los de las
+#    proyecciones
+# 4. Calcular la bondad local como coincidencias / K
+# 5. Considerar la media de la bonanza local para cada uno de los elementos
+
+obtener_vecinos <- function(dist_matrix, K){
+  # Devuelve una matriz con los indices de los K vecinos más cercanos
+  apply(dist_matrix, 1, function(fila){ order(fila)[1:K] })
+}
+
+K <- 5
+vecinos_dnuevos <- obtener_vecinos(dnuevos, K)
+vecinos_dproy <- obtener_vecinos(dproy, K)
+
+bondad_local <- sapply(1:nrow(dnuevos), function(i) {
+  # Calculamos las coincidencias por cada uno de los vecinos
+  coincidencias <- length(intersect(vecinos_dnuevos[, i], vecinos_dproy[, i]))
+  coincidencias / K
+})
+mean(bondad_local)
 
