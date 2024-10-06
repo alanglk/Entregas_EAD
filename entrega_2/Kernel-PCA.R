@@ -84,7 +84,7 @@ mean(medidaG2)
 # De los datos nuevos que puntos estan mas cerca y sacar sus clases (Con dnuevos y las de dimension reducida).
 # Sacar el porcentaje en que coinciden.
 k <- 5
-Obtener_vecinos <- function(distancias, clase){
+Obtener_vecinos <- function(distancias){
   # La distancias de los nuevos a los datos de d.
   matriz_resultado <- matrix(NA, nrow = 28, ncol = k)
   
@@ -95,13 +95,13 @@ Obtener_vecinos <- function(distancias, clase){
   matriz_resultado
 }
 
-ml1er <- Obtener_vecinos(distancias1[212:239,1:211], as.vector(clase))
-ml1dn <- Obtener_vecinos(dnuevos, as.vector(clase))
+ml1er <- Obtener_vecinos(distancias1[212:239,1:211])
+ml1dn <- Obtener_vecinos(dnuevos)
 ml1er
 ml1dn
 
-ml2er <- Obtener_vecinos(distancias2[212:239,1:211], as.vector(clase))
-ml2dn <- Obtener_vecinos(dnuevos, as.vector(clase))
+ml2er <- Obtener_vecinos(distancias2[212:239,1:211])
+ml2dn <- Obtener_vecinos(dnuevos)
 ml2er
 ml2dn
 
