@@ -20,7 +20,7 @@ d.mds <- cmdscale(d, k = 2, eig = TRUE, x.ret = TRUE)
 
 # Mostramos los valores propios para decidir el número de coordenadas
 d.mds$eig
-plot(d.mds$eig, type="b", col="darkorchid3")
+plot(d.mds$eig, type="b", col="darkorchid3", lwd = 2, xlim = c(0, 10))
 abline(h = 0, col = "blue")
 
 # En el gráfico se puede deducir que las 6 primeras componentes son las más
