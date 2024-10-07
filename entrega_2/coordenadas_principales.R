@@ -60,7 +60,7 @@ colnames(df_mds) <- c("X", "Y", "nivel")
 ggplot(df_mds, aes(x = X, y = Y, color = nivel)) +
     geom_point(size = 3) +
     labs(title = "Proyección de datos originales", x = "Q1", y = "Q2") +
-    theme_minimal()
+    theme_minimal() + theme_bw(base_size = 20)
 
 # Proyección de las nuevas muestras
 # x = 1/2 Λ^-1 X' (b -  δ^2)
@@ -78,8 +78,8 @@ df_new <- rbind(df_mds, new_x_df)
 
 ggplot(df_new, aes(x = X, y = Y, color = nivel)) +
   geom_point(size = 3) +
-  labs(title = "Proyección de datos originales y nuevos 2", x = "Q1", y = "Q2") +
-  theme_minimal()
+  labs(title = "Proyección de datos originales y nuevos", x = "Q1", y = "Q2") +
+  theme_minimal() + theme_bw(base_size = 20)
 
 
 ############# MEDIDAS DE BONDAD #############
