@@ -1,4 +1,6 @@
-
+#########################################################################
+#                     Ejercicio 1. Laboratorio 1                        #
+#########################################################################
 
 crear_muestra <- function(n, N0, N1) {
   # INPUT: número de muestras; N0 la distribución 0 y
@@ -44,7 +46,7 @@ clasificador_bayes <- function(muestra, N0, N1){
 N0 <- c(0, 1)
 N1 <- c(1, 1)
 N <- c(10, 20, 50, 100, 500, 1000, 5000)
-N <- seq(from = 1000, to = 10000, by = 1000)
+#N <- seq(from = 1000, to = 10000, by = 100)
 
 errores <- vector("list", length(N))
 for (i in 1:length(N)){
@@ -52,6 +54,7 @@ for (i in 1:length(N)){
   errores[i] <- clasificador_bayes(muestra, N0, N1)
 }
 errores
+plot(1:length(N), errores, type = "b", ylim = c(0, 0.5))
 
-plot(1:length(N), errores, type = "b")
+
 
