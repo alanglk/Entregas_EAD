@@ -77,6 +77,9 @@ x_svd <- svd(X)
 x_svd$d[(length(x_svd$d) -2):length(x_svd$d)] <- x_svd$d[(length(x_svd$d) -2):length(x_svd$d)] * 10 ^(-2)
 X_inestable <- x_svd$u %*% diag(x_svd$d) %*% t(x_svd$v)
 
-# y_sintetico1 <- Y(X, w0, rnorm(1, mean = 0, sd = 1))
-# y_sintetico2 <- 
+y_sintetico1 <- apply(X_inestable, 1, function(x) Y(x, w0, rnorm(1, mean = 0, sd = 1)) )
+y_sintetico2 <- apply(X_inestable, 1, function(x) Y(x, w0, rnorm(1, mean = 0, sd = 1)) )
 
+# Los vectores de pesos son bastante distintos 
+w_inestable1 <- solve(t(X_inestable) %*% X_inestable) %*% t(X_inestable) %*% y_sintetico1
+w_inestable2 <- solve(t(X_inestable) %*% X_inestable) %*% t(X_inestable) %*% y_sintetico2
