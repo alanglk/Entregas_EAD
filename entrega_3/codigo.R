@@ -1,87 +1,146 @@
 # Ejercicio entregable 3 --------------------------------------------------
-# Falta por hacer: Diferentes distancias para el jerarquico (min, max, avg, ward, etc.)
-# Diferentes tecnicas de clustering, kmeans, hierarchical, ¿basado en densidad?
+
+library(cluster)
+library(ggplot2)
 
 data <- read.csv("IndiceDelitos.csv", header=T, sep=" ")
 
-# Para cada disimilaridad (distancia euclidea/ distancia correlación) utilizar tecnicas de clustering para agrupar municipios. Describe los argumentos.
 distEuclidea <- dist(data, method="euclidean")
-
 correlacion <- cor(t(data), method="pearson")
 distCorrelacion <- as.dist(sqrt(1 - correlacion))
 
-# Clustering jerárquico con la distancia euclídea
-# TODO: Cambiar distancias, minima, complete, average, ward, etc.
-hc_euclidea <- hclust(distEuclidea, method = "complete")
+# (a) Clustering para agrupar municipios.
+# Clustering jerárquico 
+hc_euclidea_single <- hclust(distEuclidea, method = "single")
+hc_euclidea_complete <- hclust(distEuclidea, method = "complete")
+hc_euclidea_average <- hclust(distEuclidea, method = "average")
+hc_euclidea_ward <- hclust(distEuclidea, method = "ward.D")
 
-# Clustering jerárquico con la distancia basada en la correlación
-hc_correlacion <- hclust(distCorrelacion, method = "complete")
+hc_correlacion_single <- hclust(distCorrelacion, method = "single")
+hc_correlacion_complete <- hclust(distCorrelacion, method = "complete")
+hc_correlacion_average <- hclust(distCorrelacion, method = "average")
+hc_correlacion_ward <- hclust(distCorrelacion, method = "ward.D")
 
 # Dibujar los dendrogramas
-plot(hc_euclidea, main = "Dendrograma con distancia Euclídea")
-abline(h = 300, col = "red", lwd = 2)  # Línea horizontal para 2 clusters (ajustar el valor según el dendrograma)
+plot(hc_euclidea_single, main = "Dendrograma con distancia Euclídea y clustering jerarquico single", cex=0.9)
+# abline(h = 300, col = "red", lwd = 2) # Solo si queremos dibujar la linea para 'separar' los clusters.
+plot(hc_euclidea_complete, main = "Dendrograma con distancia Euclídea y clustering jerarquico complete", cex=0.9)
+plot(hc_euclidea_average, main = "Dendrograma con distancia Euclídea y clustering jerarquico average", cex=0.9)
+plot(hc_euclidea_ward, main = "Dendrograma con distancia Euclídea y clustering jerarquico ward", cex=0.9)
 
-plot(hc_correlacion, main = "Dendrograma con distancia Correlación")
-abline(h = 0.225, col = "blue", lwd = 1)  # Línea horizontal para 8 clusters (ajustar el valor según el dendrograma)
+plot(hc_correlacion_single, main = "Dendrograma con distancia Correlación y clustering jerarquico single", cex=0.9)
+plot(hc_correlacion_complete, main = "Dendrograma con distancia Correlación y clustering jerarquico complete", cex=0.9)
+plot(hc_correlacion_average, main = "Dendrograma con distancia Correlación y clustering jerarquico average", cex=0.9)
+plot(hc_correlacion_ward, main = "Dendrograma con distancia Correlación y clustering jerarquico ward", cex=0.9)
 
-library(cluster)
-
-# Definir número de clusters a probar
-num_clusters <- 2:20
-
-# Matriz para almacenar los promedios del valor silhouette para cada número de clusters
-silhouette_avg_euclidea <- numeric(length(num_clusters))
-silhouette_avg_correlacion <- numeric(length(num_clusters))
-
-# Calcular silhouette para clustering jerárquico con distancia euclídea
-for (k in num_clusters) {
-  cluster_assignments <- cutree(hc_euclidea, k = k)
-  sil_euclidea <- silhouette(cluster_assignments, distEuclidea)
-  silhouette_avg_euclidea[k - 1] <- mean(sil_euclidea[, 3])  # Promedio del valor silhouette
+funcion_silhouette <- function(distEuclidea, distCorrelacion, hc_euclidea, hc_correlacion){
+  num_clusters <- 2:20
+  
+  silhouette_avg_euclidea <- numeric(length(num_clusters))
+  silhouette_avg_correlacion <- numeric(length(num_clusters))
+  
+  for (k in num_clusters) {
+    cluster_assignments <- cutree(hc_euclidea, k = k)
+    sil_euclidea <- silhouette(cluster_assignments, distEuclidea)
+    silhouette_avg_euclidea[k - 1] <- mean(sil_euclidea[, 3])  
+  }
+  
+  for (k in num_clusters) {
+    cluster_assignments <- cutree(hc_correlacion, k = k)
+    sil_correlacion <- silhouette(cluster_assignments, distCorrelacion)
+    silhouette_avg_correlacion[k - 1] <- mean(sil_correlacion[, 3])  
+  }
+  
+  df_silhouette <- data.frame(
+    num_clusters = rep(num_clusters, 2),
+    avg_silhouette = c(silhouette_avg_euclidea, silhouette_avg_correlacion),
+    distancia = rep(c("Euclidea", "Correlación"), each = length(num_clusters))
+  )
+  df_silhouette
+} 
+ 
+s_max <- function(df_s, metodo){
+  max_euclidea <- df_s[df_s$distancia == "Euclidea", ][which.max(df_s[df_s$distancia == "Euclidea", ]$avg_silhouette), ]
+  max_correlacion <- df_s[df_s$distancia == "Correlación", ][which.max(df_s[df_s$distancia == "Correlación", ]$avg_silhouette), ]
+  df_max <- rbind(max_euclidea, max_correlacion)
+  df_max$metodo <- metodo
+  df_max
 }
 
-# Calcular silhouette para clustering jerárquico con distancia basada en la correlación
-for (k in num_clusters) {
-  cluster_assignments <- cutree(hc_correlacion, k = k)
-  sil_correlacion <- silhouette(cluster_assignments, distCorrelacion)
-  silhouette_avg_correlacion[k - 1] <- mean(sil_correlacion[, 3])  # Promedio del valor silhouette
-}
+df_s <- funcion_silhouette(distEuclidea, distCorrelacion, hc_euclidea_single, hc_correlacion_single)
+df_s <- s_max(df_s, "single")
+df_s
 
-# Graficar los resultados
-library(ggplot2)
-df_silhouette <- data.frame(
-  num_clusters = rep(num_clusters, 2),
-  avg_silhouette = c(silhouette_avg_euclidea, silhouette_avg_correlacion),
-  distancia = rep(c("Euclidea", "Correlación"), each = length(num_clusters))
+df_c <- funcion_silhouette(distEuclidea, distCorrelacion, hc_euclidea_complete, hc_correlacion_complete)
+df_c <- s_max(df_c, "complete")
+df_c
+
+df_a <- funcion_silhouette(distEuclidea, distCorrelacion, hc_euclidea_average, hc_correlacion_average)
+df_a <- s_max(df_c, "average")
+df_a
+
+df_w <- funcion_silhouette(distEuclidea, distCorrelacion, hc_euclidea_ward, hc_correlacion_ward)
+df_w <- s_max(df_w, "ward")
+df_w
+#--------------------------------------------------------------------------
+prE <- pam(distEuclidea, 2)
+str(si1 <- silhouette(prE))
+plot(si1) 
+plot(si1, col = c("red", "green"))
+
+prC <- pam(distCorrelacion, 9)
+str(si2 <- silhouette(prC))
+plot(si2, cex=0.7) 
+plot(si2, col = c("red", "green", "blue", "lightblue", "yellow", "purple", "black", "white", "grey"))
+#--------------------------------------------------------------------------
+# Sacar tabla de a que cluster agrupan la euclidea de jerarquica average y euclidea pam
+clusters_hclustE <- cutree(hc_euclidea_average, k = 2)
+clusters_pamE <- prE$clustering
+
+agrupamiento_df <- data.frame(
+  Cluster_Hierarquico = clusters_hclustE,
+  Cluster_PAM = clusters_pamE
 )
 
-ggplot(df_silhouette, aes(x = num_clusters, y = avg_silhouette, color = distancia)) +
-  geom_line() +
-  geom_point(size = 3, shape = 21, fill = "white") +  # Puntos con borde negro y relleno transparente
-  labs(title = "Promedio del Valor Silhouette para Distancias Euclídea y de Correlación",
-       x = "Número de Clusters",
-       y = "Valor Silhouette Promedio") +
-  theme_minimal()
-max(silhouette_avg_euclidea) # k=2
-max(silhouette_avg_correlacion)
-silhouette_avg_correlacion # k= 8
+# Visualizar la matriz de agrupamiento
+print(agrupamiento_df)
 
-# Dibujar los dendrogramas
-# Cortar en k=2 y plotear las de euclideas
-# Cortar en k=8 y plotear las de correlacion
-plot(hc_euclidea, main = "Dendrograma con distancia Euclídea")
-abline(h = 300, col = "red", lwd = 2)  # Línea horizontal para 2 clusters (ajustar el valor según el dendrograma)
+table_cluster_comparison <- table(agrupamiento_df$Cluster_Hierarquico, agrupamiento_df$Cluster_PAM)
+print(table_cluster_comparison)
 
-plot(hc_correlacion, main = "Dendrograma con distancia Correlación")
-abline(h = 0.225, col = "blue", lwd = 1)  # Línea horizontal para 8 clusters (ajustar el valor según el dendrograma)
+# Cambiar: Sacar tabla de a que cluster agrupan la correlacion de jerarquica complete y correlacion pam
+clusters_hclustC <- cutree(hc_correlacion_complete, k = 9)
+clusters_pamC <- prC$clustering
 
-# Clustering K-means con k=3, por ejemplo
-kmeans_euclidea <- kmeans(data, centers = 3, nstart = 10)
-kmeans_correlacion <- kmeans(as.matrix(distCorrelacion), centers = 3, nstart=10)
+agrupamiento_df2 <- data.frame(
+  Cluster_Hierarquico = clusters_hclustC,
+  Cluster_PAM = clusters_pamC
+)
 
-# Reducción de dimensionalidad con PCA
-pca_euclidea <- prcomp(data, scale. = TRUE)
-plot(pca_euclidea$x[,1:2], col = kmeans_euclidea$cluster, main = "PCA - Distancia Euclídea")
+matriz_cluster_comparison <- matrix(0, nrow = 9, ncol = 9)
 
+for (i in 1:nrow(agrupamiento_df2)) {
+  hclust_cluster <- agrupamiento_df2$Cluster_Hierarquico[i]
+  pam_cluster <- agrupamiento_df2$Cluster_PAM[i]
+  
+  matriz_cluster_comparison[hclust_cluster, pam_cluster] <- 
+    matriz_cluster_comparison[hclust_cluster, pam_cluster] + 1
+}
+matriz_cluster_comparison_df <- as.data.frame(matriz_cluster_comparison)
+rownames(matriz_cluster_comparison_df) <- paste("HClust", 1:9)
+colnames(matriz_cluster_comparison_df) <- paste("PAM", 1:9)
+print(matriz_cluster_comparison_df)
+#--------------------------------------------------------------------------
+# (b) Clustering K-means con k=2, por ejemplo
+kmeans_euclidea <- kmeans(data, centers = 2, nstart = 20)
+
+# Reducción de dimensionalidad con PCA.
+pca_euclidea <- cmdscale(distEuclidea, k=2)
+plot(pca_euclidea, col = kmeans_euclidea$cluster, main = "PCA - Distancia Euclídea")
+silhouette()
+# Clustering K-means con k=6, por ejemplo
+kmeans_correlacion <- kmeans(as.matrix(distCorrelacion), centers = 6, nstart=1000)
+
+# Reducción de dimensionalidad con MDS.
 pca_correlacion <- prcomp(as.matrix(distCorrelacion), scale. = TRUE)
 plot(pca_correlacion$x[,1:2], col = kmeans_correlacion$cluster, main = "PCA - Distancia Correlación")
