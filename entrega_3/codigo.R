@@ -51,7 +51,6 @@ funcion_silhouette <- function(distEuclidea, distCorrelacion, hc_euclidea, hc_co
     silhouette_avg_correlacion[k - 1] <- mean(sil_correlacion[, 3])  
   }
   
-  # Graficar los resultados
   df_silhouette <- data.frame(
     num_clusters = rep(num_clusters, 2),
     avg_silhouette = c(silhouette_avg_euclidea, silhouette_avg_correlacion),
@@ -83,18 +82,62 @@ df_a
 df_w <- funcion_silhouette(distEuclidea, distCorrelacion, hc_euclidea_ward, hc_correlacion_ward)
 df_w <- s_max(df_w, "ward")
 df_w
+#--------------------------------------------------------------------------
+prE <- pam(distEuclidea, 2)
+str(si1 <- silhouette(prE))
+plot(si1) 
+plot(si1, col = c("red", "green"))
 
-# Para la euclidea k=2 es la que mas aparece y para la correlacion k=9
-kmeans_euclidea <- kmeans(data, centers = 2, nstart = 10)
-kmeans_correlacion <- kmeans(as.matrix(distCorrelacion), centers = 6, nstart=10)
+prC <- pam(distCorrelacion, 9)
+str(si2 <- silhouette(prC))
+plot(si2, cex=0.7) 
+plot(si2, col = c("red", "green", "blue", "lightblue", "yellow", "purple", "black", "white", "grey"))
+#--------------------------------------------------------------------------
+# Sacar tabla de a que cluster agrupan la euclidea de jerarquica average y euclidea pam
+clusters_hclustE <- cutree(hc_euclidea_average, k = 2)
+clusters_pamE <- prE$clustering
 
-# Clustering K-means con k=2, por ejemplo
+agrupamiento_df <- data.frame(
+  Cluster_Hierarquico = clusters_hclustE,
+  Cluster_PAM = clusters_pamE
+)
+
+# Visualizar la matriz de agrupamiento
+print(agrupamiento_df)
+
+table_cluster_comparison <- table(agrupamiento_df$Cluster_Hierarquico, agrupamiento_df$Cluster_PAM)
+print(table_cluster_comparison)
+
+# Cambiar: Sacar tabla de a que cluster agrupan la correlacion de jerarquica complete y correlacion pam
+clusters_hclustC <- cutree(hc_correlacion_complete, k = 9)
+clusters_pamC <- prC$clustering
+
+agrupamiento_df2 <- data.frame(
+  Cluster_Hierarquico = clusters_hclustC,
+  Cluster_PAM = clusters_pamC
+)
+
+matriz_cluster_comparison <- matrix(0, nrow = 9, ncol = 9)
+
+for (i in 1:nrow(agrupamiento_df2)) {
+  hclust_cluster <- agrupamiento_df2$Cluster_Hierarquico[i]
+  pam_cluster <- agrupamiento_df2$Cluster_PAM[i]
+  
+  matriz_cluster_comparison[hclust_cluster, pam_cluster] <- 
+    matriz_cluster_comparison[hclust_cluster, pam_cluster] + 1
+}
+matriz_cluster_comparison_df <- as.data.frame(matriz_cluster_comparison)
+rownames(matriz_cluster_comparison_df) <- paste("HClust", 1:9)
+colnames(matriz_cluster_comparison_df) <- paste("PAM", 1:9)
+print(matriz_cluster_comparison_df)
+#--------------------------------------------------------------------------
+# (b) Clustering K-means con k=2, por ejemplo
 kmeans_euclidea <- kmeans(data, centers = 2, nstart = 20)
 
 # Reducción de dimensionalidad con PCA.
 pca_euclidea <- cmdscale(distEuclidea, k=2)
 plot(pca_euclidea, col = kmeans_euclidea$cluster, main = "PCA - Distancia Euclídea")
-
+silhouette()
 # Clustering K-means con k=6, por ejemplo
 kmeans_correlacion <- kmeans(as.matrix(distCorrelacion), centers = 6, nstart=1000)
 
