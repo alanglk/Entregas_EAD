@@ -144,8 +144,9 @@ calcular_errores <- function(train, test, p_values){
   return(errores)
 }
 
-p <- c(5, 10, 20, 30, 50)
-#p <- 2:50
+#p <- c(5, 10, 20, 30, 50)
+p <- 2:50
+#p <- seq(from = 3, to = 50, by =3)
 train <- generar_muestra(20) # Generar el Train set
 test <- generar_muestra(1000) # Generar el Test set
 errores <- calcular_errores(train, test, p)
@@ -155,6 +156,6 @@ plot(p, errores, type = "l", col = "blue", xlab = "p", ylab = "Error", main = "E
 # Es por ello, que cuando la dimensión aumenta se produce un modelo que pasa por los todos puntos
 # de entrenamiento, y conforme la dimensión es mayor este sobre ajuste se hace más evidente.
 # para p = 20, w es muy grande. Esto significa un overfitting máximo.
-# Para el resto de los casos no hace tanto overfiting
+# Para el resto de los casos no hace tanto overfiting. Ver las w con p = 20 y con p != 20
 
 
