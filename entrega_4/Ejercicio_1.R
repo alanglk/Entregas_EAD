@@ -46,7 +46,7 @@ clasificador_bayes <- function(muestra, N0, N1){
 N0 <- c(0, 1)
 N1 <- c(1, 1)
 N <- c(10, 20, 50, 100, 500, 1000, 5000)
-#N <- seq(from = 1000, to = 10000, by = 100)
+N <- seq(from = 1000, to = 10000, by = 100)
 
 errores <- vector("list", length(N))
 for (i in 1:length(N)){
