@@ -18,7 +18,8 @@ train_y = as.matrix(read.table("entrega_4/data/y_laboratorio_AAA.csv", header = 
 
 entrenar_clasificador <- function(train_x, train_y, alpha){
   # Iniciailizar w0
-  w <- c(-0.5, 0.5)
+  # w <- c(-0.5, 0.5)
+  w <- runif(length(train_x[1, ]), min = -0.5, max = 0.5)
   numiterations <- 200
   landa <- 1
   
@@ -103,5 +104,85 @@ ggplot(df_train) +
 
 
 ########## Apartado 2 #########################################
+data_transformation <- function(x1, x2){
+  return(x1 ^2 + x2 ^2 - 1/2)
+}
+
+# a) Transformar los datos
+train_x_trans <- cbind(train_x, apply(train_x, 1, function(x){data_transformation(x[1], x[2]) }))
+train_x_trans[, 3] <- scale(train_x_trans[, 3], center = TRUE)
+# b) Plotear los datos en 3D
+library(plotly)
+data <- data.frame(X = train_x[, 1], Y = train_x[, 2], Z = train_x[, 3], Clase = train_y)
+fig <- plot_ly(data, x = ~X,  y = ~Y, z = ~Z,  color = ~Clase, 
+               colors = c("Clase 1" = "red", "Clase 2" = "blue"),
+               type = 'scatter3d', 
+               mode = 'markers') 
+
+fig <- fig %>% layout(scene = list(xaxis = list(title = 'X1'),
+                                   yaxis = list(title = 'X2'),
+                                   zaxis = list(title = 'X3')))
+
+# c) Repetir el descenso del gradiente sobre los datos transformados
+max_iterations <- 200
+alpha <- 0.1 # Learning rate
+cls_trans <- entrenar_clasificador(train_x_trans, train_y, alpha)
+
+# Graficar el error logarítmico
+df_log_loss_trans <- data.frame(Iteration = 1:length(cls_trans$log_loss), LogLoss = cls_trans$log_loss)
+ggplot(df_log_loss_trans, aes(x = Iteration, y = LogLoss)) +
+  geom_hline(yintercept = cls_trans$log_loss[length(cls_trans$log_loss)], linetype = "dashed", color = "#ff00006e", size = 1) +
+  geom_line(color = "#3970ed", size = 1) +
+  annotate("text", x = -20, y = cls_trans$log_loss[length(cls_trans$log_loss)], label = round(cls_trans$log_loss[length(cls_trans$log_loss)], 4), color = "red")+
+  coord_cartesian(xlim = c(0, max_iterations),  clip = 'off') +
+  labs(title = "Log Loss datos transformados", x = "Iteración", y = "Log Loss Error") +
+  theme_minimal(base_size = 15, base_family = "roboto") +
+  theme( axis.line = element_line(color = "#8f8f8f", size = 0.8), axis.ticks = element_line(color = "#8f8f8f"), axis.text = element_text(color = "#8f8f8f"), plot.title = element_text(face = "bold"))
+
+# d) Visualizar datos y plano del clasificador
+
+
+########## Apartado 3 #########################################
+entrenar_clasificador_ci <- function(train_x, train_y, alpha){
+  numIteraciones <- 1
+  landa <- 1
+  N <- length(train_x[, 1])
+  d <- length(train_x[1, ])
+  
+  # Inicializar c
+  c <- matrix(NA, nrow = N, ncol = d)
+  for (i in 1:N){
+    c[i, ] <- runif(d, min = 0, max = 1)
+  }
+  
+  
+  # Loop principal. Cada iteracion es un batch
+  for (t in 1:numIteraciones){
+    ct <- c
+    
+    # Definir ft(x)
+    ft <- function(x){
+      sum <- 0.0
+      for (i in 1:N){
+        sum <- sum + t(x) %*% train_x[i, ] %*% ct[i, ]
+      }
+      return( sum )
+    }
+    
+    # Iteramos todo el batch (datos)
+    for (i in 1:N){
+      xi <- train_x[i, ]
+      ci <- c[i, ]
+      yi <- train_y[i]
+      c_new <- ci - alpha * (1 / N) * ((-yi) / ( 1+ exp(yi * ft(xi)) )) + 2 * landa * ci
+      c <- c_new
+      # cat("Iteration: ", t, " i = ", i, "c[i] = ", ci," ft(xi) = ", ft(xi),  " ct+1[i] = ", c_new, "\n")
+    }
+    
+  }
+}
+
+alpha <- 0.1 # Learning rate
+cls_c <- entrenar_clasificador_ci(train_x_trans, train_y, alpha)
 
 
