@@ -113,15 +113,15 @@ train_x_trans <- cbind(train_x, apply(train_x, 1, function(x){data_transformatio
 train_x_trans[, 3] <- scale(train_x_trans[, 3], center = TRUE)
 # b) Plotear los datos en 3D
 library(plotly)
-data <- data.frame(X = train_x[, 1], Y = train_x[, 2], Z = train_x[, 3], Clase = train_y)
-fig <- plot_ly(data, x = ~X,  y = ~Y, z = ~Z,  color = ~Clase, 
-               colors = c("Clase 1" = "red", "Clase 2" = "blue"),
+data <- data.frame(X = train_x_trans[, 1], Y = train_x_trans[, 2], Z = train_x_trans[, 3], Clase = train_y[, 1])
+fig <- plot_ly(data, x = ~X,  y = ~Y, z = ~Z,  color = ~Clase,
                type = 'scatter3d', 
                mode = 'markers') 
 
 fig <- fig %>% layout(scene = list(xaxis = list(title = 'X1'),
                                    yaxis = list(title = 'X2'),
                                    zaxis = list(title = 'X3')))
+fig
 
 # c) Repetir el descenso del gradiente sobre los datos transformados
 max_iterations <- 200
@@ -144,18 +144,30 @@ ggplot(df_log_loss_trans, aes(x = Iteration, y = LogLoss)) +
 
 ########## Apartado 3 #########################################
 entrenar_clasificador_ci <- function(train_x, train_y, alpha){
-  numIteraciones <- 1
+  numIteraciones <- 200
   landa <- 1
   N <- length(train_x[, 1])
   d <- length(train_x[1, ])
   
   # Inicializar c
-  c <- matrix(NA, nrow = N, ncol = d)
-  for (i in 1:N){
-    c[i, ] <- runif(d, min = 0, max = 1)
+  c <- runif(N, min = 0, max = 1)
+
+  # Funcion para calcular w a partir de c
+  W <- function(c){
+    w <- rep(0, d)
+    for (i in 1:N){
+      w <- w + train_x[i, ] * c[i]
+    }
+    return(w)
   }
+
+  # Calculamos w0
+  w0 <- W(c)
   
-  
+  # Metricas
+  log_loss <- rep(0, numIteraciones)
+  accuracy <- 0
+
   # Loop principal. Cada iteracion es un batch
   for (t in 1:numIteraciones){
     ct <- c
@@ -164,7 +176,7 @@ entrenar_clasificador_ci <- function(train_x, train_y, alpha){
     ft <- function(x){
       sum <- 0.0
       for (i in 1:N){
-        sum <- sum + t(x) %*% train_x[i, ] %*% ct[i, ]
+        sum <- sum + t(x) %*% train_x[i, ] * ct[i]
       }
       return( sum )
     }
@@ -172,17 +184,36 @@ entrenar_clasificador_ci <- function(train_x, train_y, alpha){
     # Iteramos todo el batch (datos)
     for (i in 1:N){
       xi <- train_x[i, ]
-      ci <- c[i, ]
+      ci <- c[i]
       yi <- train_y[i]
-      c_new <- ci - alpha * (1 / N) * ((-yi) / ( 1+ exp(yi * ft(xi)) )) + 2 * landa * ci
-      c <- c_new
-      # cat("Iteration: ", t, " i = ", i, "c[i] = ", ci," ft(xi) = ", ft(xi),  " ct+1[i] = ", c_new, "\n")
+      c[i] <- ci - alpha *  ( (-yi / ( 1+ exp(yi * ft(xi)) ) ) + 2 * landa * ci)
+
     }
     
+    w <- W(c)
+    log_loss[t] <- mean(log(1 + exp(- train_y * train_x %*%  w)))
+    y_pred <- sign(train_x %*% w)
+    accuracy <- sum(train_y == y_pred) / nrow(train_y)
+
   }
+
+  # Calculamos w final
+  w <- W(c)
+
+  return( list(w0 = w0, w = w, log_loss = log_loss, accuracy = accuracy) )
 }
 
+# Entrenar el clasificador iterando sobre las c's
 alpha <- 0.1 # Learning rate
 cls_c <- entrenar_clasificador_ci(train_x_trans, train_y, alpha)
 
-
+# Graficar el log loss
+df_log_loss_c <- data.frame(Iteration = 1:length(cls_c$log_loss), LogLoss = cls_c$log_loss)
+ggplot(df_log_loss_c, aes(x = Iteration, y = LogLoss)) +
+    geom_hline(yintercept = cls_c$log_loss[length(cls_c$log_loss)], linetype = "dashed", color = "#ff00006e", size = 1) +
+    geom_line(color = "#3970ed", size = 1) +
+    annotate("text", x = -20, y = cls_c$log_loss[length(cls_c$log_loss)], label = round(cls_c$log_loss[length(cls_c$log_loss)], 4), color = "red")+
+    coord_cartesian(xlim = c(0, max_iterations),  clip = 'off') +
+    labs(title = "Evolución del Log Loss a lo largo de las iteraciones", x = "Iteración", y = "Log Loss Error") +
+    theme_minimal(base_size = 15, base_family = "roboto") +
+    theme( axis.line = element_line(color = "#8f8f8f", size = 0.8), axis.ticks = element_line(color = "#8f8f8f"), axis.text = element_text(color = "#8f8f8f"), plot.title = element_text(face = "bold"))
