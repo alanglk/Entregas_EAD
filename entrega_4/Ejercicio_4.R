@@ -233,3 +233,5 @@ ggplot(df_log_loss_c, aes(x = Iteration, y = LogLoss)) +
 # TODO: Mostrar que si w0 es igual, da lo mismo iterar por ws o por cs. Los vectores de w deberían coincidir en cada iteración.
 
 # b) Resolver el problema utilizando la hinge-loss
+
+
