@@ -23,6 +23,10 @@ entrenar_clasificador <- function(train_x, train_y, alpha){
   numiterations <- 200
   landa <- 1
   
+  # vectores w por cada iteracion
+  ws <- matrix(NA, nrow = 0, ncol = length(train_x[1, ]))
+  ws <- rbind(ws, w)
+  
   # Métricas
   log_loss <- rep(0, numiterations)
   cro_one_loss <- rep(0, numiterations)
@@ -55,10 +59,12 @@ entrenar_clasificador <- function(train_x, train_y, alpha){
     
     # Comprobar si los pesos han cambiado con la iteración
     # Si no hemos terminado
+    ws <- rbind(ws, t(w_new))
     w <- w_new
   }
   
-  return(list(w = w, log_loss = log_loss, accuracy = accuracy))
+  rownames(ws) <- 0:numiterations
+  return(list(ws = ws, w = w, log_loss = log_loss, accuracy = accuracy))
 }
 
 ########## Apartado 1 #########################################
@@ -158,11 +164,15 @@ entrenar_clasificador_ci <- function(train_x, train_y, alpha){
     for (i in 1:N){
       w <- w + train_x[i, ] * c[i]
     }
-    return(w)
+    return(t(w))
   }
 
   # Calculamos w0
   w0 <- W(c)
+  
+  # vectores w por cada iteracion
+  ws <- matrix(NA, nrow = 0, ncol = length(train_x[1, ]))
+  ws <- rbind(ws, w0)
   
   # Metricas
   log_loss <- rep(0, numIteraciones)
@@ -176,7 +186,7 @@ entrenar_clasificador_ci <- function(train_x, train_y, alpha){
     ft <- function(x){
       sum <- 0.0
       for (i in 1:N){
-        sum <- sum + t(x) %*% train_x[i, ] * ct[i]
+        sum <- sum + t(train_x[i, ]) %*% x * ct[i]
       }
       return( sum )
     }
@@ -186,21 +196,23 @@ entrenar_clasificador_ci <- function(train_x, train_y, alpha){
       xi <- train_x[i, ]
       ci <- c[i]
       yi <- train_y[i]
-      c[i] <- ci - alpha *  ( (-yi / ( 1+ exp(yi * ft(xi)) ) ) + 2 * landa * ci)
+      c[i] <- ci - alpha *  ( (1 / N) * (-yi / ( 1+ exp(yi * ft(xi)) ) ) + 2 * landa * ci)
 
     }
     
+    # Calcular métricas y ws
     w <- W(c)
-    log_loss[t] <- mean(log(1 + exp(- train_y * train_x %*%  w)))
-    y_pred <- sign(train_x %*% w)
+    ws <- rbind(ws, w)
+    log_loss[t] <- mean(log(1 + exp(- train_y * train_x %*%  t(w) )))
+    y_pred <- sign(train_x %*% t(w))
     accuracy <- sum(train_y == y_pred) / nrow(train_y)
 
   }
 
   # Calculamos w final
   w <- W(c)
-
-  return( list(w0 = w0, w = w, log_loss = log_loss, accuracy = accuracy) )
+  rownames(ws) <- 0:numIteraciones
+  return( list(ws = ws, w = w, log_loss = log_loss, accuracy = accuracy) )
 }
 
 # Entrenar el clasificador iterando sobre las c's
@@ -217,3 +229,7 @@ ggplot(df_log_loss_c, aes(x = Iteration, y = LogLoss)) +
     labs(title = "Evolución del Log Loss a lo largo de las iteraciones", x = "Iteración", y = "Log Loss Error") +
     theme_minimal(base_size = 15, base_family = "roboto") +
     theme( axis.line = element_line(color = "#8f8f8f", size = 0.8), axis.ticks = element_line(color = "#8f8f8f"), axis.text = element_text(color = "#8f8f8f"), plot.title = element_text(face = "bold"))
+
+# TODO: Mostrar que si w0 es igual, da lo mismo iterar por ws o por cs. Los vectores de w deberían coincidir en cada iteración.
+
+# b) Resolver el problema utilizando la hinge-loss
