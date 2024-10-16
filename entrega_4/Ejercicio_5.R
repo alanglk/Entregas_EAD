@@ -64,7 +64,7 @@ points3d(new_train_x[new_sv_idx,], col = "black", size = 200, alpha = 0.8)
 legend3d("topright", legend = levels(as.factor(new_train_y)), pch = 16, col = new_colores, cex = 1.2)
 surface3d(x_seq, y_seq, z_matrix, color = "green", alpha = 0.5)
 
-# (e) No acaba de pintar bien el plano, por lo demas bien.
+# (e) 
 new_train_x2 <- train_x[-19,]
 new_train_y2 <- as.factor(train_y[-19])
 new_svm_model2 <- svm(new_train_x2, new_train_y2, kernel = "linear", cost = 1e5)
@@ -88,7 +88,7 @@ b2 <- -new_svm_model2$rho  # Sesgo del hiperplano
 # Crear una cuadrícula para el plano
 x_seq2 <- seq(min(new_train_x2[, 1]), max(new_train_x2[, 1]), length = 50)
 y_seq2 <- seq(min(new_train_x2[, 2]), max(new_train_x2[, 2]), length = 50)
-z_matrix2 <- outer(x_seq2, y_seq2, function(x, y) (-w2[1] * x - w2[2] * y - b2) / w[3])
+z_matrix2 <- outer(x_seq2, y_seq2, function(x, y) (-w2[1] * x - w2[2] * y - b2) / w2[3])
 
 # Dibujar el plano en 3D
 surface3d(x_seq2, y_seq2, z_matrix2, color = "green", alpha = 0.5)
