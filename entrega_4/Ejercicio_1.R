@@ -46,7 +46,7 @@ clasificador_bayes <- function(muestra, N0, N1){
 # Calcular el error experimental del clasificador
 N0 <- c(0, 1)
 N1 <- c(1, 1)
-N <- c(10, 20, 50, 100, 500, 1000, 5000)
+#N <- c(10, 20, 50, 100, 500, 1000, 5000)
 N <- seq(from = 1000, to = 10000, by = 100)
 
 muestras <- vector("list", length(N))
@@ -56,17 +56,33 @@ for (i in 1:length(N)){
   errores[[i]] <- clasificador_bayes(muestras[[i]], N0, N1)
 }
 errores
-plot(N, unlist(errores), type = "l", col = "purple", ylim = c(0, 0.5),
+plot(N, unlist(errores), type = "l", col = "purple", ylim = c(0.2, 0.4),
       xlab = "Tamaño de la muestra", ylab = "Error", 
       main = expression("Error experimental de un clasificador bayesiano " ~ mu[0] ~ "= 0, " ~ mu[1] ~ "= 1 y " ~ sigma[0] ~ "=" ~ sigma[1] ~ "= 1"))
 abline(h= mean(unlist(errores)), col = "red", lty = 2)
-text(x = 0, y = mean(unlist(errores)) -0.02, labels = round(mean(unlist(errores)), 3), col = "red", pos = 4)
+text(x = 1000, y = mean(unlist(errores)) -0.02, labels = round(mean(unlist(errores)), 3), col = "red", pos = 4)
 legend("topright", legend = c("Errores", "Media del error"), col = c("purple", "red"), lty = c(1, 2), bty = "n")
+
+# Calcular el error teorico
+f <- function(x) {
+  (1 / (sqrt(2 * pi))) * exp(-x^2 / 2)
+}
+
+# Calcular la integral desde 1/2 hasta +infinito
+resultado <- integrate(f, lower = 1/2, upper = Inf)
+resultado$value
+
+plot(N, unlist(errores), type = "l", col = "purple", ylim = c(0.2, 0.4),
+      xlab = "Tamaño de la muestra", ylab = "Error", 
+      main = expression("Error experimental vs teórico " ~ mu[0] ~ "= 0, " ~ mu[1] ~ "= 1 y " ~ sigma[0] ~ "=" ~ sigma[1] ~ "= 1"))
+abline(h= resultado$value, col = "red", lty = 2, lwd = 2)
+text(x = 1000, y = resultado$value -0.02, labels = round(resultado$value, 5), col = "red", pos = 4)
+legend("topright", legend = c("Error experimental", "Error teórico"), col = c("purple", "red"), lty = c(1, 2), bty = "n")
 
 
 # ¿Qué pasa si las desviaciones típicas no coinciden?
 N0 <- c(0, 1)
-N1 <- c(0, 2)
+N1 <- c(1, 2)
 N <- seq(from = 1000, to = 10000, by = 100)
 
 muestras <- vector("list", length(N))
@@ -78,31 +94,72 @@ for (i in 1:length(N)){
 errores
 plot(N, errores, type = "l", col = "purple", ylim = c(0, 0.5), 
       xlab = "Tamaño de la muestra", ylab = "Error", 
-      main = expression("Error experimental de un clasificador bayesiano " ~ mu[0] ~ "=" ~ mu[1] ~ "= 0, " ~ sigma[0] ~ "= 1 y " ~ sigma[1] ~ "= 2"))
-abline(h= mean(unlist(errores)), col = "red", lty = 2)
-text(x = 0, y = mean(unlist(errores)) -0.02, labels = round(mean(unlist(errores)), 3), col = "red", pos = 4)
-legend("topright", legend = c("Errores", "Media del error"), col = c("purple", "red"), lty = c(1, 2), bty = "n")
+      main = expression("Error experimental vs teórico " ~ mu[0] ~ "= 0, " ~ mu[1] ~ "= 1 y " ~ sigma[0] ~ "= 1, " ~ sigma[1] ~ "= 2"))
+abline(h= resultado, col = "red", lty = 2)
+text(x = 1000, y = resultado -0.02, labels = round(resultado, 5), col = "red", pos = 4)
+legend("topright", legend =  c("Error experimental", "Error teórico"), col = c("purple", "red"), lty = c(1, 2), bty = "n")
 
 ########## Grafica error analítico clasificador en  R ###################
 # Definir el rango de x
+
 x <- seq(-4, 4, length.out = 100)
 F1 <- dnorm(x, mean = 0, sd = 1)  # Distribución normal F1
-F2 <- dnorm(x, mean = 1, sd = 1)  # Distribución normal F2
+F2 <- dnorm(x, mean = 1, sd = 2)  # Distribución normal F2
+
+# Intersección
+#x_intersection <- seq(1/2, 4, length.out = 100)  # Rango donde F1 y F2 se cruzan
+D <- 2^2 - 4 * 3 * (-(1 + 8 * log(2))) # mu0 = 0 mu1 = 1, sigma0 = 1 sigma1 = 2
+x1 <- (-2 + sqrt(D)) / (2 * 3)
+x2 <- (-2 - sqrt(D)) / (2 * 3)
+x1_intersection <- seq(x1, 4, length.out = 100)
+x2_intersection <- seq(-4, x2, length.out = 100)
+x3_intersection <- seq(x1, x2, length.out = 100)
+
 plot(x, F1, type = "l", col = "red", lwd = 2, ylim = c(0, 0.45),
-     xlab = "x", ylab = "y", main = "Error de clasificación", axes = FALSE) 
+     xlab = "x", ylab = "y", main = expression("Error de clasificación " ~ mu[0] ~ "= 0, " ~ mu[1] ~ "= 1, " ~ sigma[0] ~ "= 1 y " ~ sigma[1] ~ "= 2"), axes = FALSE)
 lines(x, F2, col = "blue", lwd = 2)
-points(x = 1/2, y =  dnorm(1/2, mean = 0, sd = 1), pch=19, col = "red", bg = "red")
-x_intersection <- seq(1/2, 4, length.out = 100)  # Rango donde F1 y F2 se cruzan
-polygon(c(x_intersection, rev(x_intersection)), 
-        c(pmin(dnorm(x_intersection, mean = 0, sd = 1), 
-               dnorm(x_intersection, mean = 1, sd = 1)), 
-          rep(0, length(x_intersection))), 
+points(x = c(x1, x2), y =  dnorm(c(x1, x2), mean = 0, sd = 1), pch=19, col = "red", bg = "red")
+polygon(c(x1_intersection, rev(x1_intersection)), 
+        c(pmin(dnorm(x1_intersection, mean = 0, sd = 1), 
+               dnorm(x1_intersection, mean = 1, sd = 2)), 
+          rep(0, length(x1_intersection))), 
         col = rgb(1, 0, 0, 0.5), border = NA)
+polygon(c(x2_intersection, rev(x2_intersection)), 
+        c(pmin(dnorm(x2_intersection, mean = 0, sd = 1), 
+               dnorm(x2_intersection, mean = 1, sd = 2)), 
+          rep(0, length(x2_intersection))), 
+        col = rgb(1, 0, 0, 0.5), border = NA)
+polygon(c(x3_intersection, rev(x3_intersection)), 
+        c(pmin(dnorm(x3_intersection, mean = 0, sd = 1), 
+               dnorm(x3_intersection, mean = 1, sd = 2)), 
+          rep(0, length(x3_intersection))), 
+        col = rgb(0, 0, 1, 0.5), border = NA)
+text(x = 1.5, y = 0.05, labels = "Error cuando c real = 0", col = "red", pos = 4)
+text(x = -1.5, y = 0.05, labels = "Error cuando c real = 1", col = "blue", pos = 4)
 axis(1, at = seq(-4, 4, by = 0.5), las = 1)
 axis(2, at = seq(0, 0.45, by = 0.05), las = 1)  
-legend("topright", legend = c("F1 (N(0, 1))", "F2 (N(1, 1))", "Error"),
-       col = c("red", "blue", rgb(1, 0, 0, 0.5)), lwd = 2, 
-       pt.bg = c(NA, NA, rgb(1, 0, 0, 0.5)), pch = c(NA, NA, 22))
+legend("topright", legend = c("F1 (N(0, 1))", "F2 (N(1, 1))", "Error c real = 0", "Error c real = 1"),
+       col = c("red", "blue", rgb(1, 0, 0, 0.5), rgb(0, 0, 1, 0.5)), lwd = 2, 
+       pt.bg = c(NA, NA, rgb(1, 0, 0, 0.5), rgb(0, 0, 1, 0.5)), pch = c(NA, NA, 22, 22))
+
+# Definir las funciones a integrar
+f0 <- function(x) {
+  (1 / sqrt(2 * pi)) * exp(-x^2 / 2)
+}
+
+f1 <- function(x) {
+  (1 / (2 * sqrt(2 * pi))) * exp(-((x - 1)^2) / 8)
+}
+
+# Calcular las integrales
+integral_f1 <- integrate(f0, lower = x2, upper = x1)$value
+error_1 <- (1 -integral_f1) / 2
+integral_f2 <- integrate(f1, lower = x2, upper = x1)$value
+error_2 <- (integral_f2) / 2
+
+# Calcular el resultado final
+resultado <- error_1 + error_2
+cat(sprintf("El error teorico es: %.6f\n", resultado))
 
 ########## Extender para X perteneciente a R^d ##########################
 library(MASS)

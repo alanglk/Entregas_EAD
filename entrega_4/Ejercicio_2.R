@@ -70,16 +70,36 @@ i <- which.min(errores)
 points(landas[i], errores[i], pch = 19, col = "red", bg = "red")  # Punto rojo
 legend("topright", legend = c("Errores", "Error mínimo"), col = c("blue", "red"), pch = c(NA, 19), lty = c(1, NA))
 
+w2_optimo <- solve(t(train_x) %*% train_x + landas[i] * diag(nrow = ncol(train_x))) %*% t(train_x) %*% train_y
+errores[i]
 ######### Extensión ###########################################
 X <- rbind(train_x, test_x)
 x_svd <- svd(X)
 # Agregamos inestabilidad multiplicando los valores propios menos significativos por 10 ^-2
 x_svd$d[(length(x_svd$d) -2):length(x_svd$d)] <- x_svd$d[(length(x_svd$d) -2):length(x_svd$d)] * 10 ^(-2)
 X_inestable <- x_svd$u %*% diag(x_svd$d) %*% t(x_svd$v)
+y_sintetico <- apply(X_inestable, 1, function(x) Y(x, w0, rnorm(1, mean = 0, sd = 1)) )
 
-y_sintetico1 <- apply(X_inestable, 1, function(x) Y(x, w0, rnorm(1, mean = 0, sd = 1)) )
-y_sintetico2 <- apply(X_inestable, 1, function(x) Y(x, w0, rnorm(1, mean = 0, sd = 1)) )
+
+# Busqueda de la landa optima para los datos inestables
+calcular_error_inestable <- function(landa) {
+  w_inestable2 <- solve(t(X_inestable) %*% X_inestable + landa * diag(nrow = ncol(X_inestable))) %*% t(X_inestable) %*% y_sintetico
+  y_pred_inestable <- apply(X_inestable, 1, function(x) Y(x, w_inestable2))
+  error <- mean((y_sintetico - y_pred_inestable)^2)  # Error cuadrático
+  return(error)
+}
 
 # Los vectores de pesos son bastante distintos 
-w_inestable1 <- solve(t(X_inestable) %*% X_inestable) %*% t(X_inestable) %*% y_sintetico1
-w_inestable2 <- solve(t(X_inestable) %*% X_inestable) %*% t(X_inestable) %*% y_sintetico2
+w_inestable1 <- solve(t(X_inestable) %*% X_inestable) %*% t(X_inestable) %*% y_sintetico
+y_pred_inestable <- apply(X_inestable, 1, function(x) Y(x, w_inestable1))
+error_inestable <- mean(y_sintetico1 - y_pred_inestable)^2
+
+landas_inestable <- seq(0, 100, by = 0.1)
+errores_inestable <- sapply(landas_inestable, calcular_error)
+j <- which.min(errores_inestable) # Landa optima
+w_inestable2 <- solve(t(X_inestable) %*% X_inestable + landas[i] * diag(nrow = ncol(X_inestable))) %*% t(X_inestable) %*% y_sintetico
+
+plot(landas_inestable, errores_inestable, type = "l", col = "blue", xlab = "Valores de lambda", ylab = "Error",  main = "Gráfica de Errores vs. Lambda con inestabilidad")
+points(landas_inestable[j], errores_inestable[j], pch = 19, col = "red", bg = "red")  # Punto rojo
+legend("topright", legend = c("Errores", "Error mínimo"), col = c("blue", "red"), pch = c(NA, 19), lty = c(1, NA))
+errores[j]
