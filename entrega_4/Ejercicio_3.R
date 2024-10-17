@@ -40,7 +40,8 @@ es_lineal <- function(x_train, y_train){
   }
   y_pred <- x_train %*% w
   error <- mean((y_train - y_pred)^2)
-  print(error)
+  cat("Error: ", error, "\n")
+  cat("w: ", w, "\n")
   error < threshold
 }
 
@@ -49,6 +50,7 @@ train <- generar_muestra(10)
 x_train <- train[, 1:2]
 y_train <- train[, 3]
 
+es_lineal(x_train, y_train)
 # Transformamos los datos de dos formas distintas
 # Grado 1: X1, X2
 # Grado 2: X1, X2, X1², X2², X1X2
@@ -98,10 +100,11 @@ random_fourier_features <- function(X, num_features, scale = 1) {
 
 # Apartado 2
 n <-20
-p <- 20
 train <- generar_muestra(n)
 x_train <- train[, 1:2]
 y_train <- train[, 3]
+
+p <- 20
 x_aux <-random_fourier_features(x_train, p)
 es_lineal(x_aux, y_train)
 
@@ -129,11 +132,20 @@ calcular_errores <- function(train, test, p_values){
       w <- t(x_aux_train) %*% solve(x_aux_train %*% t(x_aux_train)) %*% y_train
     }
     
+    if ( p_values[i] == 10){
+      cat("w: ", w)
+    }
+    if ( p_values[i] == 15){
+      cat("w: ", w)
+    }
     if ( p_values[i] == 20){
-      print(w)
+      cat("w: ", w)
+    }
+    if ( p_values[i] == 25){
+      cat("w: ", w)
     }
     if ( p_values[i] == 30){
-      print(w)
+      cat("w: ", w)
     }
     
     # Evaluar el modelo con el test
@@ -157,5 +169,3 @@ plot(p, errores, type = "l", col = "blue", xlab = "p", ylab = "Error", main = "E
 # de entrenamiento, y conforme la dimensión es mayor este sobre ajuste se hace más evidente.
 # para p = 20, w es muy grande. Esto significa un overfitting máximo.
 # Para el resto de los casos no hace tanto overfiting. Ver las w con p = 20 y con p != 20
-
-
