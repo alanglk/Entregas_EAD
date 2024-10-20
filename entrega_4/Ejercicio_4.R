@@ -304,7 +304,7 @@ entrenar_clasificador_hingeloss <- function(train_x, train_y, alpha, w = NA, b =
       yi <- Y[i, ]
       
       peso <- peso + ( Sw(xi, yi, wt, bt) + 2 * landa * wt )
-      bias <- bias + Sb(xi, yi, wt, bt)
+      bias <- bias + (-1)* Sb(xi, yi, wt, bt)
     }
     return( list(peso = peso / nrow(X), bias = bias / nrow(X)) )
   }
@@ -314,7 +314,7 @@ entrenar_clasificador_hingeloss <- function(train_x, train_y, alpha, w = NA, b =
     res <- calcular_peso_bias(train_x, train_y, w, b, landa)
     r <- alpha / sqrt(iter) # Factor de regularizacion
     w_new <- w - r * res$peso
-    b_new <- b - r * res$bias
+    b_new <- b + r * res$bias
     
     # Actualizamos w y b
     w <- w_new
@@ -337,6 +337,47 @@ entrenar_clasificador_hingeloss <- function(train_x, train_y, alpha, w = NA, b =
 
 
 # Entrenar el clasificador hinge loss con biases
-cls_h <- entrenar_clasificador_hingeloss(train_x_trans, train_y, alpha, w0, 0.4)
+w0 <- c(−2,338, 0,253, −0,019)
+cls_h <- entrenar_clasificador_hingeloss(train_x_trans, train_y, alpha, w = w0, b = - 0.3)
 show_loss(cls_h$hinge_loss, "Evolución Hinge Loss")
 show_3D_data_clasificator("Hinge loss", cls_h$w, cls_h$b)
+
+
+
+hinge_loss_sgd <- function(x_train, y_train, w, learning_rate = 0.01, num_iterations = 200) {
+  n <- nrow(x_train)  # Número de ejemplos
+  d <- ncol(x_train)  # Número de características
+  
+  # Inicializar pesos (w) y bias (b)
+  b <- 0          # Bias (escalar)
+  
+  # Asegurar que y_train esté en {-1, 1}
+  y_train <- ifelse(y_train == 0, -1, y_train)
+  
+  # Bucle de entrenamiento
+  for (iteration in 1:num_iterations) {
+    for (i in 1:n) {
+      x_i <- x_train[i, ]  # Ejemplo i-ésimo
+      y_i <- y_train[i]    # Etiqueta i-ésima
+      
+      # Verificamos la condición del margen para hinge loss
+      if (y_i * (sum(w * x_i) + b) < 1) {
+        # Actualización cuando no está dentro del margen
+        w <- w + learning_rate * (y_i * x_i)
+        b <- b + learning_rate * y_i
+      }
+    }
+    
+    # Opcional: imprimir el estado cada cierto número de iteraciones
+    if (iteration %% 10 == 0) {
+      cat("Iteración:", iteration, "Bias:", b, "\n")
+    }
+  }
+  
+  # Devolver los pesos y el bias
+  return(list(w = w, b = b))
+}
+
+modelo <-hinge_loss_sgd(train_x_trans, train_y, w0, learning_rate = alpha, num_iterations = 200)
+
+show_3D_data_clasificator("Hinge loss", modelo$w, modelo$b)
