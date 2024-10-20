@@ -21,7 +21,7 @@ show_loss <- function(loss, maintext){
       geom_line(color = "#3970ed", size = 1) +
       annotate("text", x = -20, y = loss[N], label = round(loss[N], 4), color = "red")+
       coord_cartesian(xlim = c(0, N),  clip = 'off') +
-      labs(title = maintext, x = "Iteración", y = "Log Loss Error") +
+      labs(title = maintext, x = "Iteración", y = "Hinge Loss Error") +
       theme_minimal(base_size = 15, base_family = "roboto") +
       theme( axis.line = element_line(color = "#8f8f8f", size = 0.8), axis.ticks = element_line(color = "#8f8f8f"), axis.text = element_text(color = "#8f8f8f"), plot.title = element_text(face = "bold"))
 }
@@ -255,20 +255,22 @@ show_3D_data_clasificator("Datos transformados iterando sobre cs", cls_c$w)
 # TODO: Mostrar que si w0 es igual, da lo mismo iterar por ws o por cs. Los vectores de w deberían coincidir en cada iteración.
 
 # b) Resolver el problema utilizando la hinge-loss
-entrenar_clasificador_hingeloss <- function(train_x, train_y, alpha, w = NA, b = NA){
-  # Iniciailizar w0
-  # w <- c(-0.5, 0.5)
+entrenar_clasificador_hingeloss <- function(x_train, y_train, learning_rate=0.01, w = NA, b = NA, num_iterations = 200) {
+  n <- nrow(x_train)  # Número de ejemplos
+  d <- ncol(x_train)  # Número de características
+  
   if (missing(w)) {
-    w <- runif(length(train_x[1, ]), min = -0.5, max = 0.5)
+    w <- runif(d, min = -0.5, max = 0.5)
   }
   if (missing(b)) {
     b <- 0
   }
-  numiterations <- 200
-  landa <- 1
+
+  # Asegurar que y_train esté en {-1, 1}
+  y_train <- ifelse(y_train == 0, -1, y_train)
   
   # vectores w por cada iteracion
-  ws <- matrix(NA, nrow = 0, ncol = length(train_x[1, ]))
+  ws <- matrix(NA, nrow = 0, ncol = d)
   ws <- rbind(ws, w)
 
   # vectores b por cada iteracion
@@ -276,84 +278,10 @@ entrenar_clasificador_hingeloss <- function(train_x, train_y, alpha, w = NA, b =
   bs <- rbind(bs, b)
   
   # Métricas
-  hinge_loss <- rep(0, numiterations)
-  cro_one_loss <- rep(0, numiterations)
+  hinge_loss <- rep(0, num_iterations)
+  cro_one_loss <- rep(0, num_iterations)
   accuracy <- 0
-  
-  # Subgradiente Hinge loss w
-  Sw <- function(xi, yi, wt, bt){
-      aux <- yi *( t(wt) %*% xi + bt)
-      if (aux > 1) return( 0 )
-      return(-yi * xi )
-  }
 
-  # Subgradiente Hinge loss b 
-  Sb <- function(xi, yi, wt, bt){
-      aux <- yi * (t(wt) %*% xi + bt)
-      if (aux > 1) return( 0 )
-      return(-yi)
-  }
-
-  # Función para calcular los pesos intermedios
-  calcular_peso_bias <- function(X, Y, wt, bt, landa){
-    wt <- as.matrix(wt)
-    peso <- rep(0, length(wt))
-    bias <- 0
-    for (i in 1:nrow(X)){
-      xi <- as.matrix(X[i, ])
-      yi <- Y[i, ]
-      
-      peso <- peso + ( Sw(xi, yi, wt, bt) + 2 * landa * wt )
-      bias <- bias + (-1)* Sb(xi, yi, wt, bt)
-    }
-    return( list(peso = peso / nrow(X), bias = bias / nrow(X)) )
-  }
-  
-  # Batch iterator
-  for (iter in 1:numiterations){
-    res <- calcular_peso_bias(train_x, train_y, w, b, landa)
-    r <- alpha / sqrt(iter) # Factor de regularizacion
-    w_new <- w - r * res$peso
-    b_new <- b + r * res$bias
-    
-    # Actualizamos w y b
-    w <- w_new
-    b <- b_new
-    ws <- rbind(ws, t(w))
-    bs <- rbind(bs, b)
-
-    # Calcular el hinge loss
-    hinge_loss[iter] <- mean( max(c(0, 1 - train_y * (train_x %*% w + b))) ) 
-    y_pred <- sign(train_x %*% w + b) # El clasificador es: h(x) = sign(wt * x + b)
-    cro_one_loss[iter] <- mean(train_y * y_pred)
-    accuracy <- sum(train_y == y_pred) / nrow(train_y)
-    
-  }
-  
-  rownames(ws) <- 0:numiterations
-  rownames(bs) <- 0:numiterations
-  return(list(ws = ws, w = w, bs = bs, b = b, hinge_loss = hinge_loss, accuracy = accuracy))
-}
-
-
-# Entrenar el clasificador hinge loss con biases
-w0 <- c(−2,338, 0,253, −0,019)
-cls_h <- entrenar_clasificador_hingeloss(train_x_trans, train_y, alpha, w = w0, b = - 0.3)
-show_loss(cls_h$hinge_loss, "Evolución Hinge Loss")
-show_3D_data_clasificator("Hinge loss", cls_h$w, cls_h$b)
-
-
-
-hinge_loss_sgd <- function(x_train, y_train, w, learning_rate = 0.01, num_iterations = 200) {
-  n <- nrow(x_train)  # Número de ejemplos
-  d <- ncol(x_train)  # Número de características
-  
-  # Inicializar pesos (w) y bias (b)
-  b <- 0          # Bias (escalar)
-  
-  # Asegurar que y_train esté en {-1, 1}
-  y_train <- ifelse(y_train == 0, -1, y_train)
-  
   # Bucle de entrenamiento
   for (iteration in 1:num_iterations) {
     for (i in 1:n) {
@@ -361,23 +289,32 @@ hinge_loss_sgd <- function(x_train, y_train, w, learning_rate = 0.01, num_iterat
       y_i <- y_train[i]    # Etiqueta i-ésima
       
       # Verificamos la condición del margen para hinge loss
-      if (y_i * (sum(w * x_i) + b) < 1) {
+      if (y_i * (sum(w * x_i) + b) <= 1) {
         # Actualización cuando no está dentro del margen
         w <- w + learning_rate * (y_i * x_i)
         b <- b + learning_rate * y_i
       }
     }
+
+    ws <- rbind(ws, t(w))
+    bs <- rbind(bs, b)
+
+    # Calcular el hinge loss
+    hinge_loss[iteration] <- mean( max(c(0, 1 - y_train * (x_train %*% w + b))) ) 
+    y_pred <- sign(x_train %*% w + b) # El clasificador es: h(x) = sign(wt * x + b)
+    cro_one_loss[iteration] <- mean(y_train * y_pred)
+    accuracy <- sum(y_train == y_pred) / nrow(y_train)
     
-    # Opcional: imprimir el estado cada cierto número de iteraciones
-    if (iteration %% 10 == 0) {
-      cat("Iteración:", iteration, "Bias:", b, "\n")
-    }
   }
   
-  # Devolver los pesos y el bias
-  return(list(w = w, b = b))
+  rownames(ws) <- 0:num_iterations
+  rownames(bs) <- 0:num_iterations
+
+  return(list(ws = ws, w = w, bs = bs, b = b, hinge_loss = hinge_loss, accuracy = accuracy))
 }
-
-modelo <-hinge_loss_sgd(train_x_trans, train_y, w0, learning_rate = alpha, num_iterations = 200)
-
-show_3D_data_clasificator("Hinge loss", modelo$w, modelo$b)
+# Entrenar el clasificador hinge loss con biases
+w0 <- c(-2.338, 0.253, -0.019)
+cls_h <- entrenar_clasificador_hingeloss(train_x_trans, train_y, learning_rate = alpha, w= w0, num_iterations = 200)
+cls_h <- entrenar_clasificador_hingeloss(train_x_trans, train_y, learning_rate = 0.1, w = w0, num_iterations = 200)
+show_loss(cls_h$hinge_loss, "Evolución Hinge Loss")
+show_3D_data_clasificator("Hinge loss", cls_h$w, cls_h$b)
